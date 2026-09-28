@@ -17,11 +17,16 @@ History: Written by Tim Mattson, 11/1999.
 #include <cstring>
 #include <sys/time.h>
 
+#include "csv_logger.hpp"
+
+extern CSVLogger logger;
+
 static long num_steps = 100000000;
 double step;
 
 int main (int argc, char** argv)
 {
+        CSVLogger logger("pi.csv");
     
       // Read command line arguments.
       for ( int i = 0; i < argc; i++ ) {
@@ -61,4 +66,5 @@ int main (int argc, char** argv)
                 1.0e-6 * ( end.tv_usec - begin.tv_usec );
                 
       printf("\n pi with %ld steps is %lf in %lf seconds\n ",num_steps,pi,time);
+      logger.log("seq", num_steps, pi, time);
 }
