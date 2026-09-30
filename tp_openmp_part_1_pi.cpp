@@ -138,32 +138,4 @@ int main(int argc, char **argv)
         run_benchmark(test.name, test.func, num_steps, step);
     }
 
-    //     int i;
-    //     double x, pi, sum = 0.0;
-
-    //     step = 1.0 / (double)num_steps;
-
-    //     // Timer products.
-    //     struct timeval begin, end;
-
-    //     gettimeofday(&begin, NULL);
-
-    // #pragma omp parallel for private(i, x) shared(sum) firstprivate(num_steps)
-    //     for (i = 1; i <= num_steps; i++)
-    //     {
-    //         x = (i - 0.5) * step;
-    // #pragma omp critical
-    //             sum = sum + 4.0 / (1.0 + x * x);
-    //     }
-
-    //     pi = step * sum;
-
-    //     gettimeofday(&end, NULL);
-
-    //     // Calculate time.
-    //     double time = 1.0 * (end.tv_sec - begin.tv_sec) +
-    //                   1.0e-6 * (end.tv_usec - begin.tv_usec);
-
-    //     printf("\n pi with %ld steps is %lf in %lf seconds\n ", num_steps, pi, time);
-    //     logger.log("critical", num_steps, pi, time);
 }
