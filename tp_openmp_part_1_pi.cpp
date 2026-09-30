@@ -74,6 +74,22 @@ double pi_atomic(long num_steps, double step)
     return sum;
 }
 
+double pi_reduction(long num_steps, double step)
+{
+
+    int i;
+    double x, sum = 0.0;
+
+#pragma omp parallel for reduction(+:sum) private(i, x) firstprivate(num_steps)
+    for (i = 1; i <= num_steps; i++)
+    {
+        x = (i - 0.5) * step;
+#pragma omp atomic
+        sum = sum + 4.0 / (1.0 + x * x);
+    }
+    return sum;
+}
+
 void run_benchmark(const char *name, PiCalculator func, long num_steps, double step)
 {
     int i;
@@ -107,8 +123,9 @@ struct BenchmarkCase
 
 BenchmarkCase cases[] = {
     {"sequential", pi_sequential},
-    {"critical", pi_critical},
+    {"reduction", pi_reduction},
     {"atomic", pi_atomic},
+    {"critical", pi_critical},
 
 };
 
