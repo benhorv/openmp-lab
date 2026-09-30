@@ -31,7 +31,7 @@ using PiCalculator = double (*)(long num_steps, double step);
 double pi_sequential(long num_steps, double step)
 {
 
-    int i;
+    long i;
     double x, sum = 0.0;
 
     for (i = 1; i <= num_steps; i++)
@@ -47,7 +47,7 @@ double pi_sequential(long num_steps, double step)
 double pi_critical(long num_steps, double step)
 {
 
-    int i;
+    long i;
     double x, sum = 0.0;
 
 #pragma omp parallel for private(i, x) shared(sum) firstprivate(num_steps)
@@ -66,7 +66,7 @@ double pi_critical(long num_steps, double step)
 double pi_atomic(long num_steps, double step)
 {
 
-    int i;
+    long i;
     double x, sum = 0.0;
 
 #pragma omp parallel for private(i, x) shared(sum) firstprivate(num_steps)
@@ -85,7 +85,7 @@ double pi_atomic(long num_steps, double step)
 double pi_reduction(long num_steps, double step)
 {
 
-    int i;
+    long i;
     double x, sum = 0.0;
 
 #pragma omp parallel for reduction(+ : sum) private (i, x) firstprivate(num_steps)
@@ -106,9 +106,9 @@ double pi_split_atomic(long num_steps, double step)
         int thread_id = omp_get_thread_num();
         double x, split_sum = 0.0;
 
-        int start = 1 + thread_id * (num_steps / num_threads);
-        int end = start + (num_steps / num_threads) - 1;
-        for (int i = start; i <= end; i++)
+        long start = 1 + thread_id * (num_steps / num_threads);
+        long end = start + (num_steps / num_threads) - 1;
+        for (long i = start; i <= end; i++)
         {
             x = (i - 0.5) * step;
             split_sum = split_sum + 4.0 / (1.0 + x * x);
@@ -128,9 +128,9 @@ double pi_split_critical(long num_steps, double step)
         int thread_id = omp_get_thread_num();
         double x, split_sum = 0.0;
 
-        int start = 1 + thread_id * (num_steps / num_threads);
-        int end = start + (num_steps / num_threads) - 1;
-        for (int i = start; i <= end; i++)
+        long start = 1 + thread_id * (num_steps / num_threads);
+        long end = start + (num_steps / num_threads) - 1;
+        for (long i = start; i <= end; i++)
         {
             x = (i - 0.5) * step;
             split_sum = split_sum + 4.0 / (1.0 + x * x);
@@ -148,9 +148,9 @@ double pi_split_sequential(long num_steps, double step)
     int thread_id = omp_get_thread_num();
     double x, split_sum = 0.0;
 
-    int start = 1 + thread_id * (num_steps / num_threads);
-    int end = start + (num_steps / num_threads) - 1;
-    for (int i = start; i <= end; i++)
+    long start = 1 + thread_id * (num_steps / num_threads);
+    long end = start + (num_steps / num_threads) - 1;
+    for (long i = start; i <= end; i++)
     {
         x = (i - 0.5) * step;
         split_sum = split_sum + 4.0 / (1.0 + x * x);
@@ -168,9 +168,9 @@ double pi_split_reduction(long num_steps, double step)
         int thread_id = omp_get_thread_num();
         double x, split_sum = 0.0;
 
-        int start = 1 + thread_id * (num_steps / num_threads);
-        int end = start + (num_steps / num_threads) - 1;
-        for (int i = start; i <= end; i++)
+        long start = 1 + thread_id * (num_steps / num_threads);
+        long end = start + (num_steps / num_threads) - 1;
+        for (long i = start; i <= end; i++)
         {
             x = (i - 0.5) * step;
             split_sum = split_sum + 4.0 / (1.0 + x * x);
@@ -187,8 +187,6 @@ double pi_split_reduction(long num_steps, double step)
 
 void run_benchmark(const char *name, PiCalculator func, long num_steps, double step)
 {
-    int i;
-    double x, sum = 0.0;
 
     step = 1.0 / (double)num_steps;
 
