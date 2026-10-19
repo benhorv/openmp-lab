@@ -1,0 +1,18 @@
+# Compiled binaries
+pi
+vector
+fib
+matrix_mul
+*.out
+*.o
+
+# CSV benchmark data
+*.csv
+
+# Python cache
+__pycache__/
+*.pyc
+
+# System / Editor files
+.DS_Store
+.vscode/
