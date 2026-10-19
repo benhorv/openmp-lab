@@ -42,3 +42,18 @@
 == Performance analysis
 
 I have displayed the differrent methods on the two graphs. Both graphs show the runtime of the benchmarks by thread count. The first grahp shows an increase of the runtime with the increase of the number of threads. It's because the synchronisation between threads happen in each loop, costing a lot of performance. In the other cases, where sequential and the manual splits are displayed, we can see a decline in execution time, which is because the calculation is actually distributed between the threads, and the costy synchronisation is executed only as many time as many threads there are (16 times in case of 16 threads for example).
+
+= Matrix-Vector Calculation
+
+== Sequential
+
+=== Performance
+
+#figure(
+  image("figures/vector_sequential.svg", width: 100%),
+  caption: [
+    *Sequential Matrix-Vector Performance*
+  ],
+) <fig-vector-sequential>
+
+=== Analysis

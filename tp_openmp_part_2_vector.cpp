@@ -50,6 +50,9 @@
 
 #include <cmath>
 
+#include <omp.h>
+#include "csv_logger.hpp"
+
 void checkSizes(int &N, int &M, int &S, int &nrepeat);
 
 int main(int argc, char *argv[])
@@ -132,6 +135,7 @@ int main(int argc, char *argv[])
   {
     double result = 0.0;
     // For each line i
+    #pragma omp parallel for reduction(+:result)
     for (int i = 0; i < N; i++) {
     // Multiply the i lines with the vector x
     // Sum the results of the previous step into a single variable
@@ -174,8 +178,15 @@ int main(int argc, char *argv[])
   double Gbytes = 1.0e-9 * double(sizeof(double) * (M + M * N + N));
 
   // Print results (problem size, time and bandwidth in GB/s).
+
+  double problem_size = Gbytes * 1000.0;
+  double bandwidth = Gbytes * nrepeat / time;
+  int threads = omp_get_max_threads();
   printf("  N( %d ) M( %d ) nrepeat ( %d ) problem( %g MB ) time( %g s ) bandwidth( %g GB/s )\n",
-         N, M, nrepeat, Gbytes * 1000, time, Gbytes * nrepeat / time);
+         N, M, nrepeat, problem_size, time, bandwidth);
+
+  CSVLogger vector_logger("vector.csv");
+  vector_logger.log("reduction", threads, N, M, nrepeat, problem_size, time, bandwidth);
 
   std::free(A);
   std::free(y);
