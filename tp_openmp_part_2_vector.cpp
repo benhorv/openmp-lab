@@ -140,6 +140,7 @@ int main(int argc, char *argv[])
     // Multiply the i lines with the vector x
     // Sum the results of the previous step into a single variable
         double row_sum = 0.0;
+        #pragma omp simd reduction(+:row_sum)
         for (int j = 0; j < M; j++) {
             double line_sum = A[i * M + j] * x[j];
     // Multiply the result of the previous step with the i value of vector y
@@ -186,7 +187,7 @@ int main(int argc, char *argv[])
          N, M, nrepeat, problem_size, time, bandwidth);
 
   CSVLogger vector_logger("vector.csv");
-  vector_logger.log("reduction", threads, N, M, nrepeat, problem_size, time, bandwidth);
+  vector_logger.log("reduction_simd", threads, N, M, nrepeat, problem_size, time, bandwidth);
 
   std::free(A);
   std::free(y);

@@ -57,3 +57,15 @@ I have displayed the differrent methods on the two graphs. Both graphs show the 
 ) <fig-vector-sequential>
 
 === Analysis
+
+== Reduction
+
+=== Performance
+
+=== Analysis
+
+== SIMD
+
+=== Performance
+
+=== Analysis
