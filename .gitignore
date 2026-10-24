@@ -8,6 +8,7 @@ matrix_mul
 
 # CSV benchmark data
 *.csv
+!benchmark_data/thread_scaling/*.csv
 
 # Python cache
 __pycache__/

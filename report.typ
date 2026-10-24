@@ -37,6 +37,13 @@
   ],
 ) <fig-runtime-comparison>
 
+#figure(
+  image("figures/speedup_vs_threads.svg", width: 100%),
+  caption: [
+    *Speedup vs. Thread Count*
+  ],
+) <fig-speedup-comparison>
+
 #v(2em)
 
 == Performance analysis
@@ -45,16 +52,21 @@ I have displayed the differrent methods on the two graphs. Both graphs show the 
 
 = Matrix-Vector Calculation
 
-== Sequential
-
-=== Performance
+== Performance Comparison
 
 #figure(
-  image("figures/vector_sequential.svg", width: 100%),
+  image("figures/part2_runtime.svg", width: 100%),
   caption: [
-    *Sequential Matrix-Vector Performance*
+    *Matrix-Vector Runtime by Implementation*
   ],
-) <fig-vector-sequential>
+) <fig-vector-runtime>
+
+#figure(
+  image("figures/part2_speedup.svg", width: 100%),
+  caption: [
+    *Matrix-Vector Speedup by Thread Count*
+  ],
+) <fig-vector-speedup>
 
 === Analysis
 
@@ -69,3 +81,23 @@ I have displayed the differrent methods on the two graphs. Both graphs show the 
 === Performance
 
 === Analysis
+
+= Fibonacci Linked-List Processing
+
+== Performance Comparison
+
+#figure(
+  image("figures/part3_runtime.svg", width: 100%),
+  caption: [
+    *Fibonacci Workload Runtime by Scheduling Strategy*
+  ],
+) <fig-fib-runtime>
+
+#figure(
+  image("figures/part3_speedup.svg", width: 100%),
+  caption: [
+    *Fibonacci Speedup by Thread Count*
+  ],
+) <fig-fib-speedup>
+
+== Analysis

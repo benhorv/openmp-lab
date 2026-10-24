@@ -94,3 +94,53 @@ fig.savefig('figures/runtime_vs_threads.png', format='png', dpi=300, bbox_inches
 plt.close(fig)
 
 print("Figure 1 generated successfully: figures/runtime_vs_threads.svg")
+
+baseline = stats[(stats['method'] == 'sequential') & (stats['threads'] == 1)]
+if baseline.empty or baseline.iloc[0]['mean'] <= 0:
+    raise ValueError('Missing one-thread sequential baseline for speedup calculation')
+
+baseline_mean = baseline.iloc[0]['mean']
+baseline_std = baseline.iloc[0]['std']
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5.2))
+
+speedup_groups = [
+    (ax1, ['critical', 'atomic'], '(a) Per-Iteration Synchronization'),
+    (ax2, ['reduction', 'split_critical', 'split_atomic', 'split_reduction'], '(b) Private Accumulation'),
+]
+
+for ax, methods, title in speedup_groups:
+    for method in methods:
+        sub = stats[stats['method'] == method].sort_values('threads').copy()
+        sub['speedup'] = baseline_mean / sub['mean']
+        sub['speedup_std'] = sub['speedup'] * np.sqrt(
+            (baseline_std / baseline_mean) ** 2 + (sub['std'] / sub['mean']) ** 2
+        )
+        ax.errorbar(
+            sub['threads'], sub['speedup'], yerr=sub['speedup_std'],
+            label=method, color=colors[method],
+            marker=markers[method], markersize=6, capsize=3, linewidth=1.8
+        )
+
+    ax.plot(threads, threads, color='#4A5568', linestyle=':', linewidth=1.5, label='Ideal scaling')
+    ax.axhline(1, color='#718096', linestyle='--', linewidth=1.2, label='Sequential baseline')
+    ax.set_xscale('log', base=2)
+    ax.set_xticks(threads)
+    ax.get_xaxis().set_major_formatter(plt.ScalarFormatter())
+    ax.set_xlabel('Thread Count')
+    ax.set_title(title)
+    ax.grid(True, which='both', linestyle='--', alpha=0.5)
+    ax.legend(frameon=True, framealpha=0.95, edgecolor='#CBD5E0')
+
+ax1.set_yscale('log')
+ax1.set_ylim(0.001, 20)
+ax1.set_ylabel('Speedup factor (log scale)')
+ax2.set_ylim(bottom=0)
+ax2.set_ylabel('Speedup over one-thread sequential')
+fig.suptitle('Strong Scaling: Speedup vs. Threads ($N = 10^8$ steps)', fontsize=13, y=0.98)
+fig.tight_layout()
+
+fig.savefig('figures/speedup_vs_threads.svg', format='svg', bbox_inches='tight')
+fig.savefig('figures/speedup_vs_threads.png', format='png', dpi=300, bbox_inches='tight')
+plt.close(fig)
+
+print("Figure 2 generated successfully: figures/speedup_vs_threads.svg")
