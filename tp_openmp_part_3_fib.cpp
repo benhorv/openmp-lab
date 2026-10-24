@@ -9,18 +9,22 @@
 #include <cstring>
 #include <sys/time.h>
 
-static int N = 5;
+#include <algorithm>
+
+#include <vector>
+
+static int N = 40;
 
 #ifndef FS
-#define FS 38
+#define FS 13
 #endif
 
-struct node
+typedef struct node
 {
    int data;
    int fibdata;
    struct node *next;
-};
+} Node;
 
 int fib(int n)
 {
@@ -96,18 +100,41 @@ int main(int argc, char *argv[])
    p = init_list(p);
    head = p;
 
+   std::vector<Node*> nodes;
+
+   while (p != NULL)
+   {
+      nodes.push_back(p);
+      p = p->next;
+   }
+
    // Timer products.
    struct timeval begin, end;
 
    gettimeofday(&begin, NULL);
 
    {
-      while (p != NULL)
+      //while (p != NULL)
+      //{
+      //  p = p->next;
+      //}
+      #pragma omp parallel for schedule(dynamic)
+      for (int i = nodes.size() - 1; i >= 0; i--)
       {
-         processwork(p);
-         p = p->next;
+         processwork(nodes[i]);
       }
+      
    }
+
+   // we tried: sequential, parallel for, parallel schedule(dynamic)
+   // somehow didn't make a difference
+   // we tried with 8 and 16 threads
+   // that was the problem!
+   // we usually had only 7-9 tasks, because FS was set to 38
+   // I changed FS to a smaller number, and made N greater
+   // I also limited the number of threads to 2 and 4 so the scheduling would really make sense
+   // also, reverse order also mattered, but would be nicer with sorting (try?)
+   // schedule has really an impact, but normal parallel works too
 
    gettimeofday(&end, NULL);
 
