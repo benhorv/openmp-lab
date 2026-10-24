@@ -45,7 +45,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <sys/time.h>
 #include <vector>
 
 #include <cmath>
@@ -54,6 +53,114 @@
 #include "csv_logger.hpp"
 
 void checkSizes(int &N, int &M, int &S, int &nrepeat);
+
+using VectorCalculator = double (*)(int N, int M, const double *A, const double *x, const double *y);
+
+double vector_sequential(int N, int M, const double *A, const double *x, const double *y)
+{
+  double result = 0.0;
+  // For each line i
+  for (int i = 0; i < N; i++)
+  {
+    // Multiply the i lines with the vector x
+    // Sum the results of the previous step into a single variable
+    double row_sum = 0.0;
+    for (int j = 0; j < M; j++)
+    {
+      double line_sum = A[i * M + j] * x[j];
+      row_sum += line_sum; // can be shortened, extra op allocation
+    }
+    // Multiply the result of the previous step with the i value of vector y
+    // Sum the results of the previous step into a single variable (result)
+    result += y[i] * row_sum; // Accumulate with vector y
+  }
+  return result;
+}
+
+double vector_parallel(int N, int M, const double *A, const double *x, const double *y)
+{
+  double result = 0.0;
+#pragma omp parallel for reduction(+ : result)
+  for (int i = 0; i < N; i++)
+  {
+    double row_sum = 0.0;
+    for (int j = 0; j < M; j++)
+    {
+      row_sum += A[i * M + j] * x[j];
+    }
+    result += y[i] * row_sum;
+  }
+  return result;
+}
+
+double vector_simd_reduction(int N, int M, const double *A, const double *x, const double *y)
+{
+  double result = 0.0;
+#pragma omp parallel for reduction(+ : result)
+  for (int i = 0; i < N; i++)
+  {
+    double row_sum = 0.0;
+#pragma omp simd reduction(+ : row_sum)
+    for (int j = 0; j < M; j++)
+    {
+      row_sum += A[i * M + j] * x[j];
+    }
+    result += y[i] * row_sum;
+  }
+  return result;
+}
+
+void run_benchmark(const char *name, VectorCalculator func, int N, int M, int nrepeat,
+                   const double *A, const double *x, const double *y, CSVLogger &vector_logger)
+{
+  double begin = omp_get_wtime();
+
+  double result = 0.0;
+  for (int repeat = 0; repeat < nrepeat; repeat++)
+  {
+    result = func(N, M, A, x, y);
+  }
+
+  double end = omp_get_wtime();
+
+  // Calculate time.
+  // double time = timer.seconds();
+
+  double time = end - begin;
+  // Calculate bandwidth.
+  // Each matrix A row (each of length M) is read once.
+  // The x vector (of length M) is read N times.
+  // The y vector (of length N) is read once.
+  // double Gbytes = 1.0e-9 * double( sizeof(double) * ( 2 * M * N + N ) );
+  double Gbytes = 1.0e-9 * double(sizeof(double) * (M + M * N + N));
+  // Print results (problem size, time and bandwidth in GB/s).
+  double problem_size = Gbytes * 1000.0;
+  double bandwidth = Gbytes * nrepeat / time;
+  int threads = omp_get_max_threads();
+
+  printf("  %s: computed result for %d x %d is %lf\n", name, N, M, result);
+  const double solution = (double)N * (double)M;
+  if (result != solution)
+  {
+    printf("  Error: result( %lf ) != solution( %lf )\n", result, solution);
+  }
+
+  printf("  N( %d ) M( %d ) nrepeat ( %d ) problem( %g MB ) time( %g s ) bandwidth( %g GB/s )\n",
+         N, M, nrepeat, problem_size, time, bandwidth);
+  vector_logger.log(name, threads, N, M, nrepeat, problem_size, time, bandwidth);
+}
+
+struct BenchmarkCase
+{
+  const char *name;
+  VectorCalculator func;
+};
+
+BenchmarkCase cases[] = {
+    {"sequential", vector_sequential},
+    {"parallel", vector_parallel},
+    {"simd_reduction", vector_simd_reduction},
+};
 
 int main(int argc, char *argv[])
 {
@@ -126,68 +233,11 @@ int main(int argc, char *argv[])
   }
   
 
-  // Timer products.
-  struct timeval begin, end;
-
-  gettimeofday(&begin, NULL);
-
-  for (int repeat = 0; repeat < nrepeat; repeat++)
-  {
-    double result = 0.0;
-    // For each line i
-    #pragma omp parallel for reduction(+:result)
-    for (int i = 0; i < N; i++) {
-    // Multiply the i lines with the vector x
-    // Sum the results of the previous step into a single variable
-        double row_sum = 0.0;
-        #pragma omp simd reduction(+:row_sum)
-        for (int j = 0; j < M; j++) {
-            double line_sum = A[i * M + j] * x[j];
-    // Multiply the result of the previous step with the i value of vector y
-            row_sum += line_sum; // can be shortened, extra op allocation
-        }
-    // Sum the results of the previous step into a single variable (result)
-        result += y[i] * row_sum;            // Accumulate with vector y
-    }
-
-    // Output result.
-    if (repeat == (nrepeat - 1))
-    {
-      printf("  Computed result for %d x %d is %lf\n", N, M, result);
-    }
-
-    const double solution = (double)N * (double)M;
-
-    if (result != solution)
-    {
-      printf("  Error: result( %lf ) != solution( %lf )\n", result, solution);
-    }
-  }
-
-  gettimeofday(&end, NULL);
-
-  // Calculate time.
-  // double time = timer.seconds();
-  double time = 1.0 * (end.tv_sec - begin.tv_sec) +
-                1.0e-6 * (end.tv_usec - begin.tv_usec);
-
-  // Calculate bandwidth.
-  // Each matrix A row (each of length M) is read once.
-  // The x vector (of length M) is read N times.
-  // The y vector (of length N) is read once.
-  // double Gbytes = 1.0e-9 * double( sizeof(double) * ( 2 * M * N + N ) );
-  double Gbytes = 1.0e-9 * double(sizeof(double) * (M + M * N + N));
-
-  // Print results (problem size, time and bandwidth in GB/s).
-
-  double problem_size = Gbytes * 1000.0;
-  double bandwidth = Gbytes * nrepeat / time;
-  int threads = omp_get_max_threads();
-  printf("  N( %d ) M( %d ) nrepeat ( %d ) problem( %g MB ) time( %g s ) bandwidth( %g GB/s )\n",
-         N, M, nrepeat, problem_size, time, bandwidth);
-
   CSVLogger vector_logger("vector.csv");
-  vector_logger.log("reduction_simd", threads, N, M, nrepeat, problem_size, time, bandwidth);
+  for (const auto &test : cases)
+  {
+    run_benchmark(test.name, test.func, N, M, nrepeat, A, x, y, vector_logger);
+  }
 
   std::free(A);
   std::free(y);
