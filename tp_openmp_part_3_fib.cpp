@@ -7,11 +7,13 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <sys/time.h>
 
 #include <algorithm>
 
 #include <vector>
+#include <omp.h>
+
+#include "csv_logger.hpp"
 
 static int N = 40;
 
@@ -70,8 +72,96 @@ struct node *init_list(struct node *p)
    return head;
 }
 
+using FibProcessor = void (*)(std::vector<Node *> &nodes);
+
+void process_sequential(std::vector<Node *> &nodes)
+{
+   //while (p != NULL)
+      //{
+      //  p = p->next;
+      //}
+   for (int index = static_cast<int>(nodes.size()) - 1; index >= 0; index--)
+   {
+      processwork(nodes[index]);
+   }
+}
+
+void process_parallel(std::vector<Node *> &nodes)
+{
+#pragma omp parallel for
+   for (int index = static_cast<int>(nodes.size()) - 1; index >= 0; index--)
+   {
+      processwork(nodes[index]);
+   }
+}
+
+void process_parallel_static(std::vector<Node *> &nodes)
+{
+#pragma omp parallel for schedule(static)
+   for (int index = static_cast<int>(nodes.size()) - 1; index >= 0; index--)
+   {
+      processwork(nodes[index]);
+   }
+}
+
+void process_parallel_dynamic(std::vector<Node *> &nodes)
+{
+#pragma omp parallel for schedule(dynamic)
+   for (int index = static_cast<int>(nodes.size()) - 1; index >= 0; index--)
+   {
+      processwork(nodes[index]);
+   }
+}
+
+long long fib_checksum(const std::vector<Node *> &nodes)
+{
+   long long checksum = 0;
+   for (const Node *current : nodes)
+   {
+      checksum += current->fibdata;
+   }
+   return checksum;
+}
+
+long long run_benchmark(const char *name, FibProcessor func, std::vector<Node *> &nodes,
+                        int nrepeat, CSVLogger &fib_logger)
+{
+   // Timer products.
+   double begin = omp_get_wtime();
+   for (int repeat = 0; repeat < nrepeat; repeat++)
+   {
+      func(nodes);
+   }
+   double end = omp_get_wtime();
+
+   // Calculate time.
+   double time = end - begin;
+   long long checksum = fib_checksum(nodes);
+   int threads = omp_get_max_threads();
+
+   printf("  %s with %d threads computes %zu Fibonacci values; checksum %lld in %f seconds\n",
+          name, threads, nodes.size(), checksum, time);
+   fib_logger.log(name, threads, N, FS, nrepeat, checksum, time);
+   return checksum;
+}
+
+struct BenchmarkCase
+{
+   const char *name;
+   FibProcessor func;
+};
+
+BenchmarkCase cases[] = {
+    {"sequential", process_sequential},
+    {"parallel", process_parallel},
+   {"parallel_static", process_parallel_static},
+    {"parallel_dynamic", process_parallel_dynamic},
+};
+
 int main(int argc, char *argv[])
 {
+   int nrepeat = 1;
+
    // Read command line arguments.
    for (int i = 0; i < argc; i++)
    {
@@ -80,10 +170,15 @@ int main(int argc, char *argv[])
          N = atoi(argv[++i]);
          printf("  User num_node is %d\n", N);
       }
+      else if (strcmp(argv[i], "-nrepeat") == 0)
+      {
+         nrepeat = atoi(argv[++i]);
+      }
       else if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "-help") == 0))
       {
          printf("  Fib Options:\n");
          printf("  -num_node (-N) <int>:      Number of node computing fibonnaci numbers (by default 5)\n");
+         printf("  -nrepeat <int>:            number of repetitions per benchmark (default: 1)\n");
          printf("  -help (-h):            print this message\n\n");
          exit(1);
       }
@@ -108,24 +203,6 @@ int main(int argc, char *argv[])
       p = p->next;
    }
 
-   // Timer products.
-   struct timeval begin, end;
-
-   gettimeofday(&begin, NULL);
-
-   {
-      //while (p != NULL)
-      //{
-      //  p = p->next;
-      //}
-      #pragma omp parallel for schedule(dynamic)
-      for (int i = nodes.size() - 1; i >= 0; i--)
-      {
-         processwork(nodes[i]);
-      }
-      
-   }
-
    // we tried: sequential, parallel for, parallel schedule(dynamic)
    // somehow didn't make a difference
    // we tried with 8 and 16 threads
@@ -136,11 +213,20 @@ int main(int argc, char *argv[])
    // also, reverse order also mattered, but would be nicer with sorting (try?)
    // schedule has really an impact, but normal parallel works too
 
-   gettimeofday(&end, NULL);
-
-   // Calculate time.
-   double time = 1.0 * (end.tv_sec - begin.tv_sec) +
-                 1.0e-6 * (end.tv_usec - begin.tv_usec);
+   CSVLogger fib_logger("fib.csv");
+   long long expected_checksum = -1;
+   for (const auto &test : cases)
+   {
+      long long checksum = run_benchmark(test.name, test.func, nodes, nrepeat, fib_logger);
+      if (expected_checksum == -1)
+      {
+         expected_checksum = checksum;
+      }
+      else if (checksum != expected_checksum)
+      {
+         printf("  Error: checksum %lld != expected checksum %lld\n", checksum, expected_checksum);
+      }
+   }
 
    p = head;
    while (p != NULL)
@@ -151,8 +237,6 @@ int main(int argc, char *argv[])
       p = temp;
    }
    free(p);
-
-   printf("Compute Time: %f seconds\n", time);
 
    return 0;
 }
