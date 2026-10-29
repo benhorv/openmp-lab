@@ -28,6 +28,8 @@
 ]
 #v(1.5em)
 
+Benchmark tests executed on 16-core AMD CPU, 16GB of RAM, on Arch Linux. Worked together with Tomoki Mengel.
+
 = Calculating Pi
 
 #figure(
