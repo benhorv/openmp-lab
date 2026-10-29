@@ -33,7 +33,7 @@ OMP_NUM_THREADS=4 ./fib -N 10 -nrepeat 20
 Alternatively, run the automated benchmark scripts:
 
 ```bash
-./pi_bm.sh
-./vector_bm.sh
-./fib_bm.sh
+./benchmark/pi_bm.sh
+./benchmark/vector_bm.sh
+./benchmark/fib_bm.sh
 ```

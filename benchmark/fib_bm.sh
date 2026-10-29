@@ -2,7 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-DATA_DIR="$SCRIPT_DIR/benchmark_data/thread_scaling"
+ROOT_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
+DATA_DIR="$ROOT_DIR/results"
 CSV_FILE="$DATA_DIR/fib.csv"
 
 CXX=${CXX:-g++}
@@ -16,7 +17,7 @@ binary=$(mktemp "${TMPDIR:-/tmp}/openmp-fib.XXXXXX")
 trap 'rm -f "$binary"' EXIT
 
 mkdir -p "$DATA_DIR"
-"$CXX" -O3 -fopenmp -DFS="$FS" "$SCRIPT_DIR/tp_openmp_part_3_fib.cpp" -o "$binary"
+"$CXX" -O3 -fopenmp -DFS="$FS" "$ROOT_DIR/tp_openmp_part_3_fib.cpp" -o "$binary"
 
 for threads in "${THREAD_LIST[@]}"; do
     if [[ -f "$CSV_FILE" ]]; then

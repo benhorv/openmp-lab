@@ -1,12 +1,16 @@
 #!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+ROOT_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
+DATA_DIR="$ROOT_DIR/results"
 
 N_VALS=(2 4 8 10 12 14 16)
 M_VALS=(1 3 7 9 11 13 15)
 
 THREAD_LIST=(${THREADS:-16})
-
-REPEATS=${REPEATS:-10}      # Number of benchmark script repetitions for statistics
-NREPEAT=${NREPEAT:-20}      # Internal repeats within vector program
+REPEATS=${REPEATS:-10}
+NREPEAT=${NREPEAT:-20}
 
 echo "=========================================="
 echo " Part 2.6: OpenMP Matrix-Vector Benchmark"
@@ -16,16 +20,13 @@ echo "N exponents: ${N_VALS[*]} (Rows = 2^N)"
 echo "M exponents: ${M_VALS[*]} (Cols = 2^M)"
 echo "Repeats per config: $REPEATS"
 echo "Internal repeats (-nrepeat): $NREPEAT"
-echo "Output: vector.csv"
+echo "Output: results/vector.csv"
 echo "=========================================="
 
-if [ ! -f ./vector ]; then
+mkdir -p "$DATA_DIR"
+if [ ! -f "$ROOT_DIR/vector" ]; then
     echo "Compiling vector binary with OpenMP..."
-    g++ -O3 -fopenmp tp_openmp_part_2_vector.cpp -o vector
-    if [ $? -ne 0 ]; then
-        echo "Compilation failed!"
-        exit 1
-    fi
+    g++ -O3 -fopenmp "$ROOT_DIR/tp_openmp_part_2_vector.cpp" -o "$ROOT_DIR/vector"
 fi
 
 valid_shapes=0
@@ -45,9 +46,8 @@ for t in "${THREAD_LIST[@]}"; do
 
     for n in "${N_VALS[@]}"; do
         for m in "${M_VALS[@]}"; do
-            # Skip configurations exceeding 4GB of RAM or overflowing 32-bit int
             if [ $((n + m)) -ge 30 ]; then
-                echo "[SKIP] N=$n (2^$n), M=$m (2^$m) -> N+M=$((n+m)) exceeds safe memory limit (>4GB / 32-bit int overflow)"
+                echo "[SKIP] N=$n (2^$n), M=$m (2^$m) -> exceeds safe memory limit (>4GB / 32-bit int overflow)"
                 continue
             fi
 
@@ -55,13 +55,12 @@ for t in "${THREAD_LIST[@]}"; do
             echo "[$current/$total_runs] (T=$t) N=$n (2^$n rows), M=$m (2^$m cols)..."
 
             for ((r=1; r<=REPEATS; r++)); do
-                ./vector -N "$n" -M "$m" -nrepeat "$NREPEAT" > /dev/null
+                (cd "$DATA_DIR" && "$ROOT_DIR/vector" -N "$n" -M "$m" -nrepeat "$NREPEAT" > /dev/null)
             done
         done
     done
 done
 
 echo "=========================================="
-echo "Benchmark completed! Results saved in vector.csv"
-echo "Total rows logged: $(wc -l < vector.csv 2>/dev/null || echo 0)"
+echo "Benchmark completed! Results saved in results/vector.csv"
 echo "=========================================="

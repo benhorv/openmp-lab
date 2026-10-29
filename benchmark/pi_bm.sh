@@ -1,4 +1,9 @@
 #!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+ROOT_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
+DATA_DIR="$ROOT_DIR/results"
 
 echo "Bonjour, $USER !"
 echo "Pi Benchmark"
@@ -22,12 +27,17 @@ echo "Steps: $MIN_STEPS to $MAX_STEPS (x$STEP_MULTIPLIER)"
 echo "Repeats: $REPEATS"
 echo "=========================="
 
+mkdir -p "$DATA_DIR"
+if [ ! -f "$ROOT_DIR/pi" ]; then
+    g++ -O3 -fopenmp "$ROOT_DIR/tp_openmp_part_1_pi.cpp" -o "$ROOT_DIR/pi"
+fi
+
 for threads in "${THREAD_COUNTS[@]}"; do
     export OMP_NUM_THREADS=$threads
     steps=$MIN_STEPS
     while [ $steps -le $MAX_STEPS ]; do
         for ((r=1; r<=REPEATS; r++)); do
-            ./pi -N $steps
+            (cd "$DATA_DIR" && "$ROOT_DIR/pi" -N $steps)
         done
         steps=$((steps * STEP_MULTIPLIER))
     done

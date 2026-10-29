@@ -8,7 +8,7 @@ matrix_mul
 
 # CSV benchmark data
 *.csv
-!benchmark_data/thread_scaling/*.csv
+!results/*.csv
 
 # Python cache
 __pycache__/
@@ -17,3 +17,5 @@ __pycache__/
 # System / Editor files
 .DS_Store
 .vscode/
+submission.zip
+submission/

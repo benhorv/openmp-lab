@@ -4,6 +4,11 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, '..'))
+RESULTS_DIR = os.path.join(ROOT_DIR, 'results')
+FIGURES_DIR = os.path.join(ROOT_DIR, 'figures')
+
 plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')
 plt.rcParams.update({
     'font.size': 11,
@@ -14,12 +19,12 @@ plt.rcParams.update({
     'legend.fontsize': 10,
     'figure.titlesize': 13,
     'figure.dpi': 300,
-    'svg.fonttype': 'none'
+    'svg.fonttype': 'none',
 })
 
-os.makedirs('figures', exist_ok=True)
+os.makedirs(FIGURES_DIR, exist_ok=True)
 
-df = pd.read_csv('parameters.csv', header=None, names=['method', 'steps', 'pi', 'time', 'threads'])
+df = pd.read_csv(os.path.join(RESULTS_DIR, 'parameters.csv'), header=None, names=['method', 'steps', 'pi', 'time', 'threads'])
 df['method'] = df['method'].str.strip('\"')
 df = df[df['method'] != 'split_sequential']
 
@@ -55,7 +60,7 @@ for method in unsplit_order:
         sub['threads'], sub['time'],
         label=method, color=colors[method],
         marker=markers[method], markersize=6, linewidth=1.8,
-        linestyle='--' if method == 'sequential' else '-'
+        linestyle='--' if method == 'sequential' else '-',
     )
 
 ax1.set_xscale('log', base=2)
@@ -75,7 +80,7 @@ for method in split_order:
         sub['threads'], sub['time'],
         label=method, color=colors[method],
         marker=markers[method], markersize=6, linewidth=1.8,
-        linestyle='--' if method == 'sequential' else '-'
+        linestyle='--' if method == 'sequential' else '-',
     )
 
 ax2.set_xscale('log', base=2)
@@ -89,8 +94,8 @@ ax2.legend(loc='upper right', frameon=True, framealpha=0.95, edgecolor='#CBD5E0'
 fig.suptitle('Strong Scaling: Execution Time vs. Threads ($N = 10^8$ steps)', fontsize=13, y=0.98)
 fig.tight_layout()
 
-fig.savefig('figures/runtime_vs_threads.svg', format='svg', bbox_inches='tight')
-fig.savefig('figures/runtime_vs_threads.png', format='png', dpi=300, bbox_inches='tight')
+fig.savefig(os.path.join(FIGURES_DIR, 'runtime_vs_threads.svg'), format='svg', bbox_inches='tight')
+fig.savefig(os.path.join(FIGURES_DIR, 'runtime_vs_threads.png'), format='png', dpi=300, bbox_inches='tight')
 plt.close(fig)
 
 print("Figure 1 generated successfully: figures/runtime_vs_threads.svg")
@@ -114,7 +119,7 @@ for ax, methods, title in speedup_groups:
         ax.plot(
             sub['threads'], sub['speedup'],
             label=method, color=colors[method],
-            marker=markers[method], markersize=6, linewidth=1.8
+            marker=markers[method], markersize=6, linewidth=1.8,
         )
 
     ax.plot(threads, threads, color='#4A5568', linestyle=':', linewidth=1.5, label='Ideal scaling')
@@ -135,8 +140,8 @@ ax2.set_ylabel('Speedup over one-thread sequential')
 fig.suptitle('Strong Scaling: Speedup vs. Threads ($N = 10^8$ steps)', fontsize=13, y=0.98)
 fig.tight_layout()
 
-fig.savefig('figures/speedup_vs_threads.svg', format='svg', bbox_inches='tight')
-fig.savefig('figures/speedup_vs_threads.png', format='png', dpi=300, bbox_inches='tight')
+fig.savefig(os.path.join(FIGURES_DIR, 'speedup_vs_threads.svg'), format='svg', bbox_inches='tight')
+fig.savefig(os.path.join(FIGURES_DIR, 'speedup_vs_threads.png'), format='png', dpi=300, bbox_inches='tight')
 plt.close(fig)
 
 print("Figure 2 generated successfully: figures/speedup_vs_threads.svg")
