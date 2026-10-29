@@ -43,7 +43,7 @@ markers = {
     'split_critical': 'v',
 }
 
-stats = df[df['steps'] == 100000000].groupby(['method', 'threads'])['time'].agg(['mean', 'std']).reset_index()
+stats = df[df['steps'] == 100000000].groupby(['method', 'threads'])['time'].mean().reset_index()
 threads = [1, 2, 4, 8, 16]
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5.2), sharey=True)
@@ -51,10 +51,10 @@ fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5.2), sharey=True)
 unsplit_order = ['critical', 'atomic', 'sequential']
 for method in unsplit_order:
     sub = stats[stats['method'] == method].sort_values('threads')
-    ax1.errorbar(
-        sub['threads'], sub['mean'], yerr=sub['std'],
+    ax1.plot(
+        sub['threads'], sub['time'],
         label=method, color=colors[method],
-        marker=markers[method], markersize=6, capsize=3, linewidth=1.8,
+        marker=markers[method], markersize=6, linewidth=1.8,
         linestyle='--' if method == 'sequential' else '-'
     )
 
@@ -71,10 +71,10 @@ ax1.legend(loc='lower left', frameon=True, framealpha=0.95, edgecolor='#CBD5E0')
 split_order = ['sequential', 'reduction', 'split_critical', 'split_atomic', 'split_reduction']
 for method in split_order:
     sub = stats[stats['method'] == method].sort_values('threads')
-    ax2.errorbar(
-        sub['threads'], sub['mean'], yerr=sub['std'],
+    ax2.plot(
+        sub['threads'], sub['time'],
         label=method, color=colors[method],
-        marker=markers[method], markersize=6, capsize=3, linewidth=1.8,
+        marker=markers[method], markersize=6, linewidth=1.8,
         linestyle='--' if method == 'sequential' else '-'
     )
 
@@ -96,11 +96,10 @@ plt.close(fig)
 print("Figure 1 generated successfully: figures/runtime_vs_threads.svg")
 
 baseline = stats[(stats['method'] == 'sequential') & (stats['threads'] == 1)]
-if baseline.empty or baseline.iloc[0]['mean'] <= 0:
+if baseline.empty or baseline.iloc[0]['time'] <= 0:
     raise ValueError('Missing one-thread sequential baseline for speedup calculation')
 
-baseline_mean = baseline.iloc[0]['mean']
-baseline_std = baseline.iloc[0]['std']
+baseline_time = baseline.iloc[0]['time']
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5.2))
 
 speedup_groups = [
@@ -111,14 +110,11 @@ speedup_groups = [
 for ax, methods, title in speedup_groups:
     for method in methods:
         sub = stats[stats['method'] == method].sort_values('threads').copy()
-        sub['speedup'] = baseline_mean / sub['mean']
-        sub['speedup_std'] = sub['speedup'] * np.sqrt(
-            (baseline_std / baseline_mean) ** 2 + (sub['std'] / sub['mean']) ** 2
-        )
-        ax.errorbar(
-            sub['threads'], sub['speedup'], yerr=sub['speedup_std'],
+        sub['speedup'] = baseline_time / sub['time']
+        ax.plot(
+            sub['threads'], sub['speedup'],
             label=method, color=colors[method],
-            marker=markers[method], markersize=6, capsize=3, linewidth=1.8
+            marker=markers[method], markersize=6, linewidth=1.8
         )
 
     ax.plot(threads, threads, color='#4A5568', linestyle=':', linewidth=1.5, label='Ideal scaling')

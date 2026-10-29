@@ -1,109 +1,67 @@
 #!/usr/bin/env python3
 import os
-
-import matplotlib.pyplot as plt
 import pandas as pd
+import matplotlib.pyplot as plt
 
-DATA_DIR = "benchmark_data"
-FIGURE_DIR = "figures"
+plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')
 
 COLORS = {
-    "sequential": "#3E7652",
-    "parallel": "#D1783C",
-    "simd_reduction": "#397C8A",
-    "parallel_static": "#3978A0",
-    "parallel_dynamic": "#A84F4F",
+    'sequential': '#4A5568',
+    'parallel': '#D1783C',
+    'simd_reduction': '#397C8A',
+    'parallel_static': '#3978A0',
+    'parallel_dynamic': '#A84F4F',
 }
 
 
-def plot(csv_path, columns, methods, labels, title, output, speedup=False):
-    data = pd.read_csv(csv_path, header=None, names=columns)
-    data["method"] = data["method"].str.strip('"')
-    data["runtime_ms"] = data["time"] / data["nrepeat"] * 1000
-    summary = data.groupby(["method", "threads"])["runtime_ms"].agg(["mean", "std"]).reset_index()
+def plot_scaling_pair(csv_path, title, out_name, labels):
+    df = pd.read_csv(csv_path, header=None, usecols=[0, 1, 4, 6], names=['method', 'threads', 'rep', 'time'])
+    df['method'] = df['method'].str.strip('"')
+    df['ms'] = (df['time'] / df['rep']) * 1000
+    stats = df.groupby(['method', 'threads'])['ms'].mean().reset_index()
 
-    if speedup:
-        baseline = summary[(summary["method"] == "sequential") & (summary["threads"] == 1)].iloc[0]
-        baseline_mean, baseline_std = baseline["mean"], baseline["std"]
+    base_ms = stats[(stats['method'] == 'sequential') & (stats['threads'] == 1)]['ms'].iloc[0]
+    stats['speedup'] = base_ms / stats['ms']
+    threads = sorted(stats['threads'].unique())
 
-    fig, ax = plt.subplots(figsize=(7.4, 4.6))
-    for method, label in zip(methods, labels):
-        method_data = summary[summary["method"] == method].sort_values("threads")
-        mean = method_data["mean"]
-        error = method_data["std"].fillna(0)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.3))
+    for m, lbl in labels.items():
+        sub = stats[stats['method'] == m].sort_values('threads')
+        ax1.plot(sub['threads'], sub['ms'], label=lbl, color=COLORS[m], marker='o', lw=1.8)
+        if m != 'sequential':
+            ax2.plot(sub['threads'], sub['speedup'], label=lbl, color=COLORS[m], marker='o', lw=1.8)
 
-        if speedup:
-            value = baseline_mean / mean
-            error = value * ((baseline_std / baseline_mean) ** 2 + (error / mean) ** 2) ** 0.5
-        else:
-            value = mean
+    ax2.plot(threads, threads, '--', color='#66736B', lw=1.5, label='Ideal scaling')
+    ax2.axhline(1, color='#A0A8A2', linestyle=':', lw=1.2, label='Sequential baseline')
 
-        ax.errorbar(
-            method_data["threads"],
-            value,
-            yerr=error,
-            label=label,
-            color=COLORS[method],
-            marker="o",
-            markersize=5,
-            capsize=3,
-            linewidth=2,
-        )
+    for ax, yl, subtitle in [
+        (ax1, 'Mean Runtime per iteration (ms)', '(a) Execution Time vs Threads'),
+        (ax2, 'Speedup over Sequential (x)', '(b) Speedup vs Threads'),
+    ]:
+        ax.set(title=subtitle, xlabel='OpenMP Thread Count', ylabel=yl, xticks=threads, ylim=(0, None))
+        ax.grid(True, linestyle='--', alpha=0.5)
+        ax.legend(frameon=True, framealpha=0.9, fontsize=9)
 
-    thread_counts = sorted(data["threads"].unique())
-    if speedup:
-        ax.plot(thread_counts, thread_counts, color="#66736B", linestyle="--", linewidth=1.5, label="Ideal scaling")
-        ax.axhline(1, color="#A0A8A2", linestyle=":", linewidth=1.2, label="Sequential baseline")
-
-    ax.set_title(title)
-    ax.set_ylabel("Speedup over one-thread sequential (x)" if speedup else "Mean runtime per iteration (ms)")
-    ax.set_xlabel("OpenMP thread count")
-    ax.set_xticks(thread_counts)
-    ax.set_ylim(bottom=0)
-    ax.set_axisbelow(True)
-    ax.grid(axis="y", color="#D9DFDA", linewidth=0.8)
-    ax.spines[["top", "right"]].set_visible(False)
-    ax.legend(frameon=False, ncol=2)
-
+    fig.suptitle(title, fontsize=12, y=0.98)
     fig.tight_layout()
-    for extension in ("svg", "png"):
-        fig.savefig(os.path.join(FIGURE_DIR, f"{output}.{extension}"), bbox_inches="tight")
+
+    os.makedirs('figures', exist_ok=True)
+    for ext in ('svg', 'png'):
+        fig.savefig(f'figures/{out_name}.{ext}', bbox_inches='tight', dpi=300 if ext == 'png' else None)
     plt.close(fig)
 
 
-def main():
-    os.makedirs(FIGURE_DIR, exist_ok=True)
-
-    datasets = [
-        (
-            "part2",
-            os.path.join(DATA_DIR, "thread_scaling", "vector.csv"),
-            ["method", "threads", "N", "M", "nrepeat", "problem_size", "time", "bandwidth"],
-            ["sequential", "parallel", "simd_reduction"],
-            ["Sequential", "Parallel", "SIMD reduction"],
-            "Matrix-vector",
-        ),
-        (
-            "part3",
-            os.path.join(DATA_DIR, "thread_scaling", "fib.csv"),
-            ["method", "threads", "N", "FS", "nrepeat", "checksum", "time"],
-            ["sequential", "parallel", "parallel_static", "parallel_dynamic"],
-            ["Sequential", "Default", "Static", "Dynamic"],
-            "Fibonacci",
-        ),
-    ]
-
-    for part, csv_path, columns, methods, labels, name in datasets:
-        part_label = part.replace("part", "Part ")
-        for speedup in (False, True):
-            selected = methods[1:] if speedup else methods
-            selected_labels = labels[1:] if speedup else labels
-            kind = "speedup" if speedup else "runtime"
-            title = f"{part_label}: {name} {kind} scaling"
-            plot(csv_path, columns, selected, selected_labels, title, f"{part}_{kind}", speedup)
-
-    print("Generated figures for 2 and 3")
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    plot_scaling_pair(
+        'benchmark_data/thread_scaling/vector.csv',
+        'Part 2: Matrix-Vector Strong Scaling ($N=512, M=512$)',
+        'part2_scaling',
+        {'sequential': 'Sequential', 'parallel': 'Parallel (Reduction)', 'simd_reduction': 'SIMD Reduction'},
+    )
+    plot_scaling_pair(
+        'benchmark_data/thread_scaling/fib.csv',
+        'Part 3: Fibonacci Workload Scaling ($N=10, FS=17$)',
+        'part3_scaling',
+        {'sequential': 'Sequential', 'parallel': 'Default', 'parallel_static': 'Static', 'parallel_dynamic': 'Dynamic'},
+    )
+    print("Generated clean scaling figures for Part 2 and Part 3 (no error bars).")
