@@ -4,14 +4,12 @@ echo "Bonjour, $USER !"
 echo "Pi Benchmark"
 echo "=========================="
 
-# Configuration
-MIN_STEPS=${MIN_STEPS:-10000}           # smallest problem size
-MAX_STEPS=${MAX_STEPS:-100000000}       # largest problem size (1T is too slow for sequential)
-STEP_MULTIPLIER=${STEP_MULTIPLIER:-100} # multiply steps by this each iteration
-MAX_THREADS=${MAX_THREADS:-$(nproc)}    # max threads, defaults to number of CPUs
-REPEATS=${REPEATS:-10}                  # number of times each test is repeated
+MIN_STEPS=${MIN_STEPS:-10000}
+MAX_STEPS=${MAX_STEPS:-100000000}
+STEP_MULTIPLIER=${STEP_MULTIPLIER:-100}
+MAX_THREADS=${MAX_THREADS:-$(nproc)}
+REPEATS=${REPEATS:-10}
 
-# Build thread counts as powers of 2 up to MAX_THREADS
 THREAD_COUNTS=()
 t=1
 while [ $t -le $MAX_THREADS ]; do

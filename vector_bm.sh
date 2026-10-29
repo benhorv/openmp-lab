@@ -1,10 +1,8 @@
 #!/bin/bash
 
-# Configuration
 N_VALS=(2 4 8 10 12 14 16)
 M_VALS=(1 3 7 9 11 13 15)
 
-# Thread counts to benchmark (defaults to 16, or e.g. THREADS="1 2 4 8 16")
 THREAD_LIST=(${THREADS:-16})
 
 REPEATS=${REPEATS:-10}      # Number of benchmark script repetitions for statistics
@@ -21,7 +19,6 @@ echo "Internal repeats (-nrepeat): $NREPEAT"
 echo "Output: vector.csv"
 echo "=========================================="
 
-# Compile if not present
 if [ ! -f ./vector ]; then
     echo "Compiling vector binary with OpenMP..."
     g++ -O3 -fopenmp tp_openmp_part_2_vector.cpp -o vector
@@ -31,7 +28,6 @@ if [ ! -f ./vector ]; then
     fi
 fi
 
-# Count valid configurations
 valid_shapes=0
 for n in "${N_VALS[@]}"; do
     for m in "${M_VALS[@]}"; do
